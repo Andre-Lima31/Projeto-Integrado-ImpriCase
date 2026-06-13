@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>PrintOS — Printer Manager</title>
+<title>ImpriCase — Printer Manager</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -402,7 +402,7 @@ td strong{color:var(--ink);font-weight:500}
       <div class="auth-logo-icon">
         <svg viewBox="0 0 24 24"><path d="M6 2h12v4H6zM4 6h16a2 2 0 012 2v8a2 2 0 01-2 2h-2v4H6v-4H4a2 2 0 01-2-2V8a2 2 0 012-2zm14 3a1 1 0 100 2 1 1 0 000-2zM8 16h8v4H8v-4z"/></svg>
       </div>
-      <div class="auth-logo-text">Print<span>OS</span></div>
+      <div class="auth-logo-text">Impri<span>Case</span></div>
     </div>
 
     <div class="auth-tabs">
@@ -423,9 +423,6 @@ td strong{color:var(--ink);font-weight:500}
           <input class="form-input" id="login-senha" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
         </div>
         <button class="btn btn-accent" id="btn-login" onclick="doLogin()">Entrar no Sistema</button>
-      </div>
-      <div class="auth-hint">
-        💡 Admin padrão: <strong>admin@printos.com</strong> / <strong>admin123</strong>
       </div>
     </div>
 
@@ -463,7 +460,7 @@ td strong{color:var(--ink);font-weight:500}
   <aside class="sidebar">
     <div class="logo">
       <div class="logo-icon"><svg viewBox="0 0 24 24" fill="#000"><path d="M6 2h12v4H6zM4 6h16a2 2 0 012 2v8a2 2 0 01-2 2h-2v4H6v-4H4a2 2 0 01-2-2V8a2 2 0 012-2zm14 3a1 1 0 100 2 1 1 0 000-2zM8 16h8v4H8v-4z"/></svg></div>
-      <div class="logo-text">Print<span>OS</span></div>
+      <div class="logo-text">Impri<span>Case</span></div>
     </div>
     <div class="nav-label">Sistema</div>
     <div class="nav-item active" data-view="dashboard" onclick="navigate(this)">
@@ -614,7 +611,7 @@ td strong{color:var(--ink);font-weight:500}
           <div class="settings-card"><h3>Rede & Conectividade</h3><div class="settings-row"><span class="settings-key">Protocolo</span><span class="settings-val">IPP / 631</span></div><div class="settings-row"><span class="settings-key">Servidor CUPS</span><span class="settings-val">192.168.1.10</span></div><div class="settings-row"><span class="settings-key">Timeout</span><span class="settings-val">30s</span></div><div class="settings-row"><span class="settings-key">Auto-descoberta</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div></div>
           <div class="settings-card"><h3>Impressão Padrão</h3><div class="settings-row"><span class="settings-key">Qualidade</span><span class="settings-val">Alta (600dpi)</span></div><div class="settings-row"><span class="settings-key">Modo</span><span class="settings-val">Frente e verso</span></div><div class="settings-row"><span class="settings-key">Cópias</span><span class="settings-val">1</span></div><div class="settings-row"><span class="settings-key">Colorido</span><div class="toggle" onclick="this.classList.toggle('on')"></div></div></div>
           <div class="settings-card"><h3>Notificações</h3><div class="settings-row"><span class="settings-key">Email p/ alertas</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div><div class="settings-row"><span class="settings-key">Alerta de toner</span><span class="settings-val">&lt; 20%</span></div><div class="settings-row"><span class="settings-key">Relatório diário</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div><div class="settings-row"><span class="settings-key">Slack webhook</span><div class="toggle" onclick="this.classList.toggle('on')"></div></div></div>
-          <div class="settings-card"><h3>Sistema</h3><div class="settings-row"><span class="settings-key">Versão</span><span class="settings-val">PrintOS v2.4.1</span></div><div class="settings-row"><span class="settings-key">Sessão</span><span class="settings-val" id="setting-session">—</span></div><div class="settings-row"><span class="settings-key">Logs</span><span class="settings-val">Ativados</span></div><div class="settings-row"><button class="btn btn-danger" style="font-size:11px;padding:5px 10px" onclick="toast('Sistema reiniciado!','yellow')">Reiniciar Serviço</button></div></div>
+          <div class="settings-card"><h3>Sistema</h3><div class="settings-row"><span class="settings-key">Versão</span><span class="settings-val">ImpriCase v4</span></div><div class="settings-row"><span class="settings-key">Sessão</span><span class="settings-val" id="setting-session">—</span></div><div class="settings-row"><span class="settings-key">Logs</span><span class="settings-val">Ativados</span></div><div class="settings-row"><button class="btn btn-danger" style="font-size:11px;padding:5px 10px" onclick="toast('Sistema reiniciado!','yellow')">Reiniciar Serviço</button></div></div>
         </div>
       </div>
 
