@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>ImpriCase — Printer Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0e11;--surface:#13151a;--surface2:#1c1f28;
+  --border:#252830;--border2:#2e3240;
+  --ink:#e8eaf0;--ink2:#9aa0b8;--ink3:#5a6080;
+  --accent:#4af0a0;--accent2:#00c97a;
+  --warn:#f0c040;--danger:#f05060;--info:#40a8f0;--purple:#a080f0;
+  --radius:10px;
+  --font-mono:'IBM Plex Mono',monospace;
+  --font:'IBM Plex Sans',sans-serif;
+}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(255,255,255,.018) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,255,255,.018) 40px);pointer-events:none;z-index:999}
+
+/* ── AUTH SCREEN ── */
+#auth-screen{
+  display:flex;align-items:center;justify-content:center;
+  min-height:100vh;padding:24px;
+  background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(74,240,160,.08),transparent 70%);
+}
+.auth-card{
+  width:100%;max-width:440px;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:18px;
+  padding:40px 36px;
+  box-shadow:0 32px 80px rgba(0,0,0,.5);
+  animation:cardIn .4s cubic-bezier(.16,1,.3,1);
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+.auth-logo{display:flex;align-items:center;gap:12px;margin-bottom:32px}
+.auth-logo-icon{
+  width:44px;height:44px;background:var(--accent);border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+}
+.auth-logo-icon svg{width:24px;height:24px;fill:#000}
+.auth-logo-text{font-family:var(--font-mono);font-size:20px;font-weight:700}
+.auth-logo-text span{color:var(--accent)}
+
+.auth-tabs{display:flex;gap:0;margin-bottom:28px;background:var(--surface2);border-radius:8px;padding:3px}
+.auth-tab{
+  flex:1;padding:8px;text-align:center;cursor:pointer;
+  border-radius:6px;font-family:var(--font-mono);font-size:12px;font-weight:600;
+  color:var(--ink3);transition:all .2s;
+}
+.auth-tab.active{background:var(--border2);color:var(--ink)}
+
+.auth-form{display:flex;flex-direction:column;gap:16px}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-label{font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.5px;text-transform:uppercase}
+.form-input{
+  background:var(--surface2);border:1px solid var(--border2);
+  border-radius:8px;padding:11px 14px;
+  color:var(--ink);font-family:var(--font-mono);font-size:13px;
+  outline:none;transition:border-color .2s;width:100%;
+}
+.form-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(74,240,160,.1)}
+.form-input::placeholder{color:var(--ink3)}
+
+.form-select{
+  background:var(--surface2);border:1px solid var(--border2);
+  border-radius:8px;padding:11px 14px;
+  color:var(--ink);font-family:var(--font-mono);font-size:13px;
+  outline:none;width:100%;cursor:pointer;
+}
+.form-select option{background:var(--surface2)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 18px;border-radius:var(--radius);font-family:var(--font-mono);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap}
+.btn svg{width:14px;height:14px}
+.btn-accent{background:var(--accent);color:#000;width:100%;margin-top:4px}
+.btn-accent:hover{background:var(--accent2);transform:translateY(-1px);box-shadow:0 4px 20px rgba(74,240,160,.35)}
+.btn-accent:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-ghost{background:transparent;color:var(--ink2);border:1px solid var(--border2)}
+.btn-ghost:hover{background:var(--surface2);color:var(--ink)}
+.btn-danger{background:rgba(240,80,96,.15);color:var(--danger);border:1px solid rgba(240,80,96,.3)}
+.btn-danger:hover{background:rgba(240,80,96,.25)}
+
+.auth-error{
+  background:rgba(240,80,96,.12);border:1px solid rgba(240,80,96,.3);
+  border-radius:8px;padding:10px 14px;
+  font-family:var(--font-mono);font-size:12px;color:var(--danger);
+  display:none;
+}
+.auth-error.show{display:block}
+.auth-success{
+  background:rgba(74,240,160,.1);border:1px solid rgba(74,240,160,.3);
+  border-radius:8px;padding:10px 14px;
+  font-family:var(--font-mono);font-size:12px;color:var(--accent);
+  display:none;
+}
+.auth-success.show{display:block}
+
+.auth-footer{margin-top:20px;text-align:center;font-size:12px;color:var(--ink3);font-family:var(--font-mono)}
+.auth-footer span{color:var(--accent);cursor:pointer;text-decoration:underline}
+.auth-hint{
+  margin-top:16px;padding:12px 14px;
+  background:rgba(64,168,240,.07);border:1px solid rgba(64,168,240,.2);
+  border-radius:8px;font-family:var(--font-mono);font-size:11px;color:var(--info);
+  line-height:1.6;
+}
+
+/* ── APP SCREEN ── */
+#app-screen{display:none}
+.shell{display:flex;height:100vh}
+
+/* SIDEBAR */
+.sidebar{width:240px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:0 0 16px;position:relative;overflow:hidden}
+.sidebar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:120px;background:linear-gradient(to top,rgba(74,240,160,.07),transparent);pointer-events:none}
+.logo{display:flex;align-items:center;gap:10px;padding:20px 20px 18px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.logo-icon{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-icon svg{width:18px;height:18px;fill:#000}
+.logo-text{font-family:var(--font-mono);font-weight:700;font-size:15px;letter-spacing:-.3px}
+.logo-text span{color:var(--accent)}
+.nav-label{font-family:var(--font-mono);font-size:10px;font-weight:600;color:var(--ink3);letter-spacing:1.5px;text-transform:uppercase;padding:10px 20px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;cursor:pointer;border-left:2px solid transparent;transition:all .15s;color:var(--ink2);font-size:13.5px;font-weight:500}
+.nav-item:hover{background:var(--surface2);color:var(--ink)}
+.nav-item.active{color:var(--accent);background:rgba(74,240,160,.07);border-left-color:var(--accent)}
+.nav-item svg{width:16px;height:16px;flex-shrink:0;opacity:.8}
+.nav-item .badge{margin-left:auto;background:var(--danger);color:#fff;font-family:var(--font-mono);font-size:10px;font-weight:700;padding:1px 6px;border-radius:20px}
+.nav-item .badge.warn{background:var(--warn);color:#000}
+.sidebar-footer{margin-top:auto;padding:14px 20px 0;border-top:1px solid var(--border);position:relative;z-index:1}
+.user-row{display:flex;align-items:center;gap:10px}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--accent));display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:12px;font-weight:700;color:#000}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-size:11px;color:var(--ink3);font-family:var(--font-mono)}
+.btn-logout{background:none;border:none;color:var(--ink3);cursor:pointer;font-size:11px;font-family:var(--font-mono);margin-top:8px;width:100%;text-align:left;padding:4px 0;transition:color .15s}
+.btn-logout:hover{color:var(--danger)}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.topbar{height:56px;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 24px}
+.topbar-title{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--ink2)}
+.topbar-title span{color:var(--ink)}
+.topbar-actions{margin-left:auto;display:flex;gap:8px}
+.btn-sm{padding:7px 14px;font-size:12px}
+.content{flex:1;overflow-y:auto;padding:24px;scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
+
+/* VIEWS */
+.view{display:none}
+.view.active{display:block;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;position:relative;overflow:hidden;transition:border-color .2s}
+.stat-card:hover{border-color:var(--border2)}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.stat-card.green::before{background:var(--accent)}
+.stat-card.yellow::before{background:var(--warn)}
+.stat-card.red::before{background:var(--danger)}
+.stat-card.blue::before{background:var(--info)}
+.stat-label{font-size:11px;color:var(--ink3);font-family:var(--font-mono);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px}
+.stat-value{font-family:var(--font-mono);font-size:28px;font-weight:700;line-height:1}
+.stat-value.green{color:var(--accent)}.stat-value.yellow{color:var(--warn)}.stat-value.red{color:var(--danger)}.stat-value.blue{color:var(--info)}
+.stat-sub{font-size:11px;color:var(--ink3);margin-top:6px}
+.stat-icon{position:absolute;right:16px;top:16px;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;opacity:.6}
+.stat-icon svg{width:18px;height:18px}
+.stat-icon.green{background:rgba(74,240,160,.12);color:var(--accent)}
+.stat-icon.yellow{background:rgba(240,192,64,.12);color:var(--warn)}
+.stat-icon.red{background:rgba(240,80,96,.12);color:var(--danger)}
+.stat-icon.blue{background:rgba(64,168,240,.12);color:var(--info)}
+
+/* SECTION */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.section-title{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--ink)}
+.section-title span{color:var(--ink3);font-weight:400}
+
+/* PRINTERS GRID */
+.printers-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px}
+.printer-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.printer-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.printer-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.printer-icon-wrap{width:42px;height:42px;border-radius:10px;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.printer-meta{flex:1;min-width:0}
+.printer-name{font-weight:600;font-size:14px;margin-bottom:2px}
+.printer-model{font-size:11px;color:var(--ink3);font-family:var(--font-mono)}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.status-dot.online{background:var(--accent);box-shadow:0 0 8px var(--accent);animation:pulse 2s infinite}
+.status-dot.warning{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+.status-dot.offline{background:var(--danger)}
+.status-dot.idle{background:var(--ink3)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.printer-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.p-stat{background:var(--surface2);border-radius:6px;padding:8px 10px}
+.p-stat-label{font-size:10px;color:var(--ink3);font-family:var(--font-mono);margin-bottom:3px}
+.p-stat-val{font-family:var(--font-mono);font-size:13px;font-weight:600}
+.progress-bar{height:4px;background:var(--surface2);border-radius:2px;margin-top:12px;overflow:hidden}
+.progress-fill{height:100%;border-radius:2px;transition:width .5s ease}
+.progress-fill.green{background:var(--accent)}.progress-fill.yellow{background:var(--warn)}.progress-fill.red{background:var(--danger)}
+.printer-footer{margin-top:12px;display:flex;align-items:center;justify-content:space-between}
+.status-tag{font-family:var(--font-mono);font-size:10px;font-weight:600;padding:3px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px}
+.status-tag.online{background:rgba(74,240,160,.12);color:var(--accent)}
+.status-tag.warning{background:rgba(240,192,64,.12);color:var(--warn)}
+.status-tag.offline{background:rgba(240,80,96,.12);color:var(--danger)}
+.status-tag.idle{background:rgba(90,96,128,.15);color:var(--ink3)}
+.action-btns{display:flex;gap:4px}
+.icon-btn{width:28px;height:28px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;color:var(--ink2)}
+.icon-btn:hover{background:var(--border2);color:var(--ink)}
+.icon-btn svg{width:13px;height:13px}
+
+/* TABLE */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:24px}
+table{width:100%;border-collapse:collapse}
+thead tr{background:var(--surface2)}
+th{padding:10px 16px;text-align:left;font-family:var(--font-mono);font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border)}
+td{padding:12px 16px;font-size:13px;color:var(--ink2);border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background .1s}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+td.mono{font-family:var(--font-mono);font-size:12px}
+td strong{color:var(--ink);font-weight:500}
+.job-progress{display:flex;align-items:center;gap:8px}
+.job-bar{flex:1;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;min-width:60px}
+.job-fill{height:100%;border-radius:2px}
+.job-fill.printing{background:var(--accent)}
+.job-fill.queued{background:var(--info)}
+.job-fill.done{background:var(--ink3)}
+.job-fill.error{background:var(--danger)}
+.job-pct{font-family:var(--font-mono);font-size:11px;color:var(--ink3);min-width:28px;text-align:right}
+
+/* ALERTS */
+.alerts-list{display:flex;flex-direction:column;gap:8px;margin-bottom:24px}
+.alert-item{display:flex;align-items:flex-start;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.alert-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.alert-icon svg{width:16px;height:16px}
+.alert-icon.warn{background:rgba(240,192,64,.12);color:var(--warn)}
+.alert-icon.danger{background:rgba(240,80,96,.12);color:var(--danger)}
+.alert-icon.info{background:rgba(64,168,240,.12);color:var(--info)}
+.alert-content{flex:1}
+.alert-title{font-weight:600;font-size:13px;margin-bottom:2px}
+.alert-desc{font-size:12px;color:var(--ink3);line-height:1.5}
+.alert-time{font-family:var(--font-mono);font-size:10px;color:var(--ink3);white-space:nowrap;margin-top:2px}
+
+/* SIMULATION */
+.printer-anim-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px 24px;display:flex;flex-direction:column;align-items:center;gap:20px;margin-bottom:24px;position:relative;overflow:hidden}
+.printer-anim-wrap h3{font-family:var(--font-mono);font-size:13px;color:var(--ink2);align-self:flex-start}
+.printer-3d{position:relative;width:220px;margin:10px auto}
+.p3d-body{background:#1e2230;border:2px solid var(--border2);border-radius:14px 14px 6px 6px;height:70px;position:relative;box-shadow:0 8px 24px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06)}
+.p3d-top{position:absolute;top:-16px;left:10px;right:10px;height:20px;background:#252838;border:2px solid var(--border2);border-bottom:none;border-radius:10px 10px 0 0}
+.p3d-slot{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:140px;height:5px;background:var(--bg);border-radius:2px;overflow:hidden}
+.p3d-paper{position:absolute;left:50%;transform:translateX(-50%);width:120px;background:#f0ede8;border-radius:2px;box-shadow:0 2px 8px rgba(0,0,0,.4);top:-40px;height:60px;display:flex;flex-direction:column;overflow:hidden}
+.p3d-lines{padding:8px;display:flex;flex-direction:column;gap:4px}
+.p3d-line{height:3px;background:#2a2a2a;border-radius:1px;opacity:0}
+.p3d-light{position:absolute;top:12px;right:14px;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.p3d-light.blink{animation:blink .8s step-end infinite}
+@keyframes blink{50%{opacity:0}}
+.p3d-base{background:#161820;border:2px solid var(--border);border-top:none;border-radius:0 0 8px 8px;height:14px}
+.printing-active .p3d-paper{animation:paperOut 3s linear infinite}
+.printing-active .p3d-line{animation:lineAppear 3s linear infinite}
+.printing-active .p3d-line:nth-child(1){animation-delay:.3s}
+.printing-active .p3d-line:nth-child(2){animation-delay:.7s}
+.printing-active .p3d-line:nth-child(3){animation-delay:1.1s}
+.printing-active .p3d-line:nth-child(4){animation-delay:1.5s}
+.printing-active .p3d-line:nth-child(5){animation-delay:1.9s}
+@keyframes paperOut{0%{top:-5px;height:0}100%{top:-80px;height:100px}}
+@keyframes lineAppear{0%,30%{opacity:0}50%,100%{opacity:.7}}
+.anim-job-info{text-align:center}
+.anim-job-name{font-weight:600;font-size:14px;margin-bottom:4px}
+.anim-job-sub{font-family:var(--font-mono);font-size:11px;color:var(--ink3)}
+.anim-controls{display:flex;gap:8px;align-items:center}
+
+/* USERS ADMIN */
+.users-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:24px}
+.user-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;transition:border-color .2s}
+.user-card:hover{border-color:var(--border2)}
+.user-card-header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.user-card-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:14px;font-weight:700;color:#000;flex-shrink:0}
+.user-card-info{flex:1;min-width:0}
+.user-card-name{font-weight:600;font-size:14px;margin-bottom:2px}
+.user-card-email{font-size:11px;color:var(--ink3);font-family:var(--font-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.perfil-tag{font-family:var(--font-mono);font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;text-transform:uppercase}
+.perfil-tag.admin{background:rgba(160,128,240,.15);color:var(--purple)}
+.perfil-tag.operador{background:rgba(74,240,160,.1);color:var(--accent)}
+.perfil-tag.visualizador{background:rgba(64,168,240,.1);color:var(--info)}
+.user-card-meta{display:flex;align-items:center;justify-content:space-between}
+.user-card-date{font-family:var(--font-mono);font-size:10px;color:var(--ink3)}
+
+/* SETTINGS */
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.settings-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.settings-card h3{font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.settings-row:last-child{border-bottom:none}
+.settings-key{font-size:13px;color:var(--ink2)}
+.settings-val{font-family:var(--font-mono);font-size:12px;color:var(--ink)}
+.toggle{width:36px;height:20px;border-radius:10px;background:var(--surface2);border:1px solid var(--border2);position:relative;cursor:pointer;transition:all .2s}
+.toggle.on{background:var(--accent2);border-color:var(--accent2)}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .2s}
+.toggle.on::after{transform:translateX(16px)}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:28px;width:480px;max-width:95vw;transform:translateY(12px);transition:transform .2s}
+.modal-overlay.open .modal{transform:none}
+.modal-title{font-family:var(--font-mono);font-weight:700;font-size:16px;margin-bottom:6px}
+.modal-sub{font-size:13px;color:var(--ink3);margin-bottom:20px}
+.modal-form{display:flex;flex-direction:column;gap:14px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+
+/* TOAST */
+.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:200;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:12px 16px;font-family:var(--font-mono);font-size:12px;display:flex;align-items:center;gap:10px;min-width:240px;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:toastIn .3s ease}
+@keyframes toastIn{from{opacity:0;transform:translateX(20px)}}
+.toast-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.toast-dot.green{background:var(--accent)}.toast-dot.red{background:var(--danger)}.toast-dot.yellow{background:var(--warn)}
+
+/* SPINNER */
+.spinner{width:18px;height:18px;border:2px solid rgba(0,0,0,.3);border-top-color:#000;border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+@media(max-width:1200px){.printers-grid{grid-template-columns:repeat(2,1fr)}.stats-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ AUTH SCREEN ══════════════ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M6 2h12v4H6zM4 6h16a2 2 0 012 2v8a2 2 0 01-2 2h-2v4H6v-4H4a2 2 0 01-2-2V8a2 2 0 012-2zm14 3a1 1 0 100 2 1 1 0 000-2zM8 16h8v4H8v-4z"/></svg>
+      </div>
+      <div class="auth-logo-text">Impri<span>Case</span></div>
+    </div>
+
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tab-login" onclick="switchTab('login')">Entrar</div>
+      <div class="auth-tab" id="tab-cadastro" onclick="switchTab('cadastro')">Cadastrar</div>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div id="form-login">
+      <div class="auth-error" id="login-error"></div>
+      <div class="auth-form">
+        <div class="form-group">
+          <label class="form-label">E-mail</label>
+          <input class="form-input" id="login-email" type="email" placeholder="seu@email.com" autocomplete="email"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Senha</label>
+          <input class="form-input" id="login-senha" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
+        </div>
+        <button class="btn btn-accent" id="btn-login" onclick="doLogin()">Entrar no Sistema</button>
+      </div>
+    </div>
+
+    <!-- CADASTRO FORM -->
+    <div id="form-cadastro" style="display:none">
+      <div class="auth-error" id="cadastro-error"></div>
+      <div class="auth-success" id="cadastro-success"></div>
+      <div class="auth-form">
+        <div class="form-group">
+          <label class="form-label">Nome completo</label>
+          <input class="form-input" id="cad-nome" type="text" placeholder="Seu nome"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">E-mail</label>
+          <input class="form-input" id="cad-email" type="email" placeholder="seu@email.com" autocomplete="email"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Senha</label>
+          <input class="form-input" id="cad-senha" type="password" placeholder="mínimo 6 caracteres"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirmar Senha</label>
+          <input class="form-input" id="cad-confirmar" type="password" placeholder="confirme a senha" onkeydown="if(event.key==='Enter')doCadastro()"/>
+        </div>
+        <button class="btn btn-accent" id="btn-cadastro" onclick="doCadastro()">Criar Conta</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════ APP SCREEN ══════════════ -->
+<div id="app-screen">
+<div class="shell">
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon"><svg viewBox="0 0 24 24" fill="#000"><path d="M6 2h12v4H6zM4 6h16a2 2 0 012 2v8a2 2 0 01-2 2h-2v4H6v-4H4a2 2 0 01-2-2V8a2 2 0 012-2zm14 3a1 1 0 100 2 1 1 0 000-2zM8 16h8v4H8v-4z"/></svg></div>
+      <div class="logo-text">Impri<span>Case</span></div>
+    </div>
+    <div class="nav-label">Sistema</div>
+    <div class="nav-item active" data-view="dashboard" onclick="navigate(this)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 13h6a1 1 0 001-1V4a1 1 0 00-1-1H4a1 1 0 00-1 1v8a1 1 0 001 1zm0 8h6a1 1 0 001-1v-4a1 1 0 00-1-1H4a1 1 0 00-1 1v4a1 1 0 001 1zm10 0h6a1 1 0 001-1v-8a1 1 0 00-1-1h-6a1 1 0 00-1 1v8a1 1 0 001 1zm0-12h6a1 1 0 001-1V4a1 1 0 00-1-1h-6a1 1 0 00-1 1v4a1 1 0 001 1z"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item" data-view="printers" onclick="navigate(this)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 2h12v4H6zM4 6h16a2 2 0 012 2v8a2 2 0 01-2 2h-2v4H6v-4H4a2 2 0 01-2-2V8a2 2 0 012-2zm14 3a1 1 0 100 2 1 1 0 000-2zM8 16h8v4H8v-4z"/></svg>
+      Impressoras
+    </div>
+    <div class="nav-item" data-view="queue" onclick="navigate(this)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
+      Fila de Impressão
+      <span class="badge" id="queue-badge">5</span>
+    </div>
+    <div class="nav-item" data-view="alerts" onclick="navigate(this)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 017 7c0 3.13-2.07 5.76-4.93 6.65L13 22h-2l-.93-6.35A7.001 7.001 0 0112 2zm0 2a5 5 0 100 10A5 5 0 0012 4zm0 2a1 1 0 011 1v3a1 1 0 01-2 0V7a1 1 0 011-1z"/></svg>
+      Alertas
+      <span class="badge warn">3</span>
+    </div>
+    <div class="nav-item" data-view="sim" onclick="navigate(this)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+      Simulação
+    </div>
+    <div class="nav-item admin-only" data-view="users" onclick="navigate(this)" style="display:none">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+      Usuários
+    </div>
+    <div class="nav-label">Config</div>
+    <div class="nav-item" data-view="settings" onclick="navigate(this)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 15.5A3.5 3.5 0 018.5 12 3.5 3.5 0 0112 8.5a3.5 3.5 0 013.5 3.5 3.5 3.5 0 01-3.5 3.5m7.43-2.92c.04-.34.07-.69.07-1.08s-.03-.73-.07-1.08l2.32-1.8c.21-.16.27-.45.13-.69l-2.2-3.81c-.14-.24-.42-.32-.66-.24l-2.74 1.1c-.57-.44-1.18-.81-1.86-1.08L14.5 2.35A.534.534 0 0014 2h-4c-.27 0-.5.19-.54.44L9.07 5.11C8.4 5.38 7.78 5.76 7.21 6.2L4.47 5.1c-.24-.08-.52 0-.66.24L1.61 9.15c-.14.24-.08.53.13.69l2.32 1.8c-.04.34-.07.69-.07 1.08s.03.73.07 1.08l-2.32 1.8c-.21.16-.27.45-.13.69l2.2 3.81c.14.24.42.32.66.24l2.74-1.1c.57.44 1.18.81 1.86 1.08l.38 2.76c.04.25.27.44.54.44h4c.27 0 .5-.19.54-.44l.38-2.76c.67-.27 1.29-.64 1.86-1.08l2.74 1.1c.24.08.52 0 .66-.24l2.2-3.81c.14-.24.08-.53-.13-.69l-2.32-1.8z"/></svg>
+      Configurações
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-row">
+        <div class="user-avatar" id="sidebar-avatar">?</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebar-name">—</div>
+          <div class="user-role" id="sidebar-role">—</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">⏻ Sair do sistema</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title"><span>Dashboard</span> — Visão Geral</div>
+      <div class="topbar-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openModal()">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          Adicionar Impressora
+        </button>
+        <button class="btn btn-accent btn-sm" onclick="printJobModal()">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 2h12v4H6zM4 6h16a2 2 0 012 2v8a2 2 0 01-2 2h-2v4H6v-4H4a2 2 0 01-2-2V8a2 2 0 012-2zM8 16h8v4H8v-4z"/></svg>
+          Imprimir
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="view active" id="view-dashboard">
+        <div class="stats-grid">
+          <div class="stat-card green"><div class="stat-icon green"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 2h12v4H6zM4 6h16a2 2 0 012 2v8a2 2 0 01-2 2h-2v4H6v-4H4a2 2 0 01-2-2V8a2 2 0 012-2zm14 3a1 1 0 100 2 1 1 0 000-2zM8 16h8v4H8v-4z"/></svg></div><div class="stat-label">Impressoras Online</div><div class="stat-value green">4</div><div class="stat-sub">de 6 dispositivos</div></div>
+          <div class="stat-card blue"><div class="stat-icon blue"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg></div><div class="stat-label">Jobs na Fila</div><div class="stat-value blue" id="dash-jobs">5</div><div class="stat-sub">aguardando / em progresso</div></div>
+          <div class="stat-card yellow"><div class="stat-icon yellow"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21L12 2l11 19H1zm11-3v-2h-2v2h2zm0-4V10h-2v4h2z"/></svg></div><div class="stat-label">Alertas Ativos</div><div class="stat-value yellow">3</div><div class="stat-sub">requerem atenção</div></div>
+          <div class="stat-card green"><div class="stat-icon green"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg></div><div class="stat-label">Páginas Hoje</div><div class="stat-value green">1.247</div><div class="stat-sub">+12% vs ontem</div></div>
+        </div>
+        <div class="section-header"><div class="section-title">Impressoras <span>— status rápido</span></div><button class="btn btn-ghost btn-sm" onclick="navigate(document.querySelector('[data-view=printers]'))">Ver todas →</button></div>
+        <div class="printers-grid" id="dash-printers"></div>
+        <div class="section-header"><div class="section-title">Últimos Jobs</div></div>
+        <div class="table-wrap" id="dash-queue-wrap"></div>
+      </div>
+
+      <!-- PRINTERS -->
+      <div class="view" id="view-printers">
+        <div class="section-header"><div class="section-title">Todas as Impressoras <span id="printer-count"></span></div><button class="btn btn-accent btn-sm" onclick="openModal()">+ Adicionar</button></div>
+        <div class="printers-grid" id="all-printers"></div>
+      </div>
+
+      <!-- QUEUE -->
+      <div class="view" id="view-queue">
+        <div class="section-header"><div class="section-title">Fila de Impressão</div><button class="btn btn-ghost btn-sm" onclick="clearDoneJobs()">Limpar concluídos</button></div>
+        <div class="table-wrap" id="full-queue-wrap"></div>
+      </div>
+
+      <!-- ALERTS -->
+      <div class="view" id="view-alerts">
+        <div class="section-header"><div class="section-title">Alertas do Sistema</div></div>
+        <div class="alerts-list">
+          <div class="alert-item"><div class="alert-icon danger"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21L12 2l11 19H1zm11-3v-2h-2v2h2zm0-4V10h-2v4h2z"/></svg></div><div class="alert-content"><div class="alert-title">Papel esgotado — HP LaserJet Pro</div><div class="alert-desc">A bandeja principal da impressora HP LaserJet Pro (Sala 3B) está sem papel.</div></div><div class="alert-time">há 5 min</div></div>
+          <div class="alert-item"><div class="alert-icon warn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21L12 2l11 19H1zm11-3v-2h-2v2h2zm0-4V10h-2v4h2z"/></svg></div><div class="alert-content"><div class="alert-title">Toner abaixo de 15% — Kyocera ECOSYS</div><div class="alert-desc">O cartucho de toner preto da Kyocera ECOSYS (Recepção) está em nível crítico.</div></div><div class="alert-time">há 23 min</div></div>
+          <div class="alert-item"><div class="alert-icon warn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21L12 2l11 19H1zm11-3v-2h-2v2h2zm0-4V10h-2v4h2z"/></svg></div><div class="alert-content"><div class="alert-title">Impressora offline — Canon PIXMA</div><div class="alert-desc">A Canon PIXMA (Diretoria) não responde ao ping de rede. Verifique a conexão.</div></div><div class="alert-time">há 1h</div></div>
+          <div class="alert-item"><div class="alert-icon info"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg></div><div class="alert-content"><div class="alert-title">Manutenção agendada — Epson WorkForce</div><div class="alert-desc">Manutenção preventiva agendada para 20/05/2026 às 08:00.</div></div><div class="alert-time">há 2h</div></div>
+        </div>
+      </div>
+
+      <!-- SIMULATION -->
+      <div class="view" id="view-sim">
+        <div class="section-header"><div class="section-title">Simulação de Impressão</div></div>
+        <div class="printer-anim-wrap">
+          <h3>Visualizador de Job</h3>
+          <div class="printer-3d" id="printer3d">
+            <div class="p3d-top"></div>
+            <div class="p3d-body">
+              <div class="p3d-light" id="p3d-light"></div>
+              <div class="p3d-slot"><div class="p3d-paper" id="p3d-paper"><div class="p3d-lines"><div class="p3d-line" style="width:80%"></div><div class="p3d-line" style="width:65%"></div><div class="p3d-line" style="width:90%"></div><div class="p3d-line" style="width:55%"></div><div class="p3d-line" style="width:75%"></div></div></div></div>
+            </div>
+            <div class="p3d-base"></div>
+          </div>
+          <div class="anim-job-info">
+            <div class="anim-job-name" id="anim-job-name">— Nenhum job ativo —</div>
+            <div class="anim-job-sub" id="anim-job-sub">Pressione "Iniciar Impressão" para simular</div>
+          </div>
+          <div class="anim-controls">
+            <button class="btn btn-accent btn-sm" id="btn-start-print" onclick="startSimPrint()">▶ Iniciar Impressão</button>
+            <button class="btn btn-ghost btn-sm" id="btn-stop-print" onclick="stopSimPrint()" style="display:none">■ Parar</button>
+          </div>
+          <div style="width:100%;max-width:360px">
+            <div class="progress-bar" style="height:6px"><div class="progress-fill green" id="sim-bar" style="width:0%"></div></div>
+            <div style="display:flex;justify-content:space-between;margin-top:6px">
+              <span style="font-family:var(--font-mono);font-size:11px;color:var(--ink3)">Progresso</span>
+              <span style="font-family:var(--font-mono);font-size:11px;color:var(--accent)" id="sim-pct">0%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- USERS (admin only) -->
+      <div class="view" id="view-users">
+        <div class="section-header">
+          <div class="section-title">Gerenciar Usuários <span id="users-count"></span></div>
+          <button class="btn btn-accent btn-sm" onclick="openUserModal()">+ Novo Usuário</button>
+        </div>
+        <div class="users-grid" id="users-grid"></div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="view" id="view-settings">
+        <div class="section-header"><div class="section-title">Configurações do Sistema</div></div>
+        <div class="settings-grid">
+          <div class="settings-card"><h3>Rede & Conectividade</h3><div class="settings-row"><span class="settings-key">Protocolo</span><span class="settings-val">IPP / 631</span></div><div class="settings-row"><span class="settings-key">Servidor CUPS</span><span class="settings-val">192.168.1.10</span></div><div class="settings-row"><span class="settings-key">Timeout</span><span class="settings-val">30s</span></div><div class="settings-row"><span class="settings-key">Auto-descoberta</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div></div>
+          <div class="settings-card"><h3>Impressão Padrão</h3><div class="settings-row"><span class="settings-key">Qualidade</span><span class="settings-val">Alta (600dpi)</span></div><div class="settings-row"><span class="settings-key">Modo</span><span class="settings-val">Frente e verso</span></div><div class="settings-row"><span class="settings-key">Cópias</span><span class="settings-val">1</span></div><div class="settings-row"><span class="settings-key">Colorido</span><div class="toggle" onclick="this.classList.toggle('on')"></div></div></div>
+          <div class="settings-card"><h3>Notificações</h3><div class="settings-row"><span class="settings-key">Email p/ alertas</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div><div class="settings-row"><span class="settings-key">Alerta de toner</span><span class="settings-val">&lt; 20%</span></div><div class="settings-row"><span class="settings-key">Relatório diário</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div><div class="settings-row"><span class="settings-key">Slack webhook</span><div class="toggle" onclick="this.classList.toggle('on')"></div></div></div>
+          <div class="settings-card"><h3>Sistema</h3><div class="settings-row"><span class="settings-key">Versão</span><span class="settings-val">ImpriCase v3</span></div><div class="settings-row"><span class="settings-key">Sessão</span><span class="settings-val" id="setting-session">—</span></div><div class="settings-row"><span class="settings-key">Logs</span><span class="settings-val">Ativados</span></div><div class="settings-row"><button class="btn btn-danger" style="font-size:11px;padding:5px 10px" onclick="toast('Sistema reiniciado!','yellow')">Reiniciar Serviço</button></div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- MODAL PRINTER -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalIfOutside(event)">
+  <div class="modal">
+    <div class="modal-title">Adicionar Impressora</div>
+    <div class="modal-sub">Preencha os dados do novo dispositivo</div>
+    <div class="modal-form">
+      <div class="form-group"><label class="form-label">Nome</label><input class="form-input" id="inp-name" placeholder="HP LaserJet Pro — Sala 201"/></div>
+      <div class="form-group"><label class="form-label">Modelo</label><input class="form-input" id="inp-model" placeholder="HP LaserJet Pro M404dn"/></div>
+      <div class="form-group"><label class="form-label">Localização</label><input class="form-input" id="inp-location" placeholder="Andar 2 — Sala B"/></div>
+      <div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="inp-type"><option value="Laser">Laser</option><option value="Jato de Tinta">Jato de Tinta</option><option value="Térmica">Térmica</option><option value="Matricial">Matricial</option></select></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-accent" style="width:auto" onclick="addPrinter()">Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL JOB -->
+<div class="modal-overlay" id="job-modal-overlay" onclick="closeJobModalIfOutside(event)">
+  <div class="modal">
+    <div class="modal-title">Novo Job de Impressão</div>
+    <div class="modal-sub">Configure e envie para a fila</div>
+    <div class="modal-form">
+      <div class="form-group"><label class="form-label">Documento</label><input class="form-input" id="job-doc" placeholder="Relatório_Financeiro.pdf"/></div>
+      <div class="form-group"><label class="form-label">Impressora</label><select class="form-select" id="job-printer"></select></div>
+      <div class="form-group"><label class="form-label">Páginas</label><input class="form-input" id="job-pages" type="number" min="1" max="500" value="1"/></div>
+      <div class="form-group"><label class="form-label">Cópias</label><input class="form-input" id="job-copies" type="number" min="1" max="99" value="1"/></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeJobModal()">Cancelar</button>
+      <button class="btn btn-accent" style="width:auto" onclick="submitJob()">Enviar para Fila</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL USER -->
+<div class="modal-overlay" id="user-modal-overlay" onclick="closeUserModalIfOutside(event)">
+  <div class="modal">
+    <div class="modal-title" id="user-modal-title">Novo Usuário</div>
+    <div class="modal-sub">Preencha os dados para criar a conta</div>
+    <div class="auth-error" id="user-modal-error" style="margin-bottom:12px"></div>
+    <input type="hidden" id="edit-user-id"/>
+    <div class="modal-form">
+      <div class="form-group"><label class="form-label">Nome</label><input class="form-input" id="um-nome" placeholder="Nome completo"/></div>
+      <div class="form-group"><label class="form-label">E-mail</label><input class="form-input" id="um-email" type="email" placeholder="email@empresa.com"/></div>
+      <div class="form-group"><label class="form-label">Senha <span style="color:var(--ink3);font-size:10px">(deixe em branco ao editar para manter)</span></label><input class="form-input" id="um-senha" type="password" placeholder="mínimo 6 caracteres"/></div>
+      <div class="form-group"><label class="form-label">Perfil</label><select class="form-select" id="um-perfil"><option value="operador">Operador</option><option value="visualizador">Visualizador</option><option value="admin">Admin</option></select></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeUserModal()">Cancelar</button>
+      <button class="btn btn-accent" style="width:auto" id="btn-save-user" onclick="saveUser()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ── SESSION STATE ─────────────────────────────────────────────────────
+let currentUser = null;
+
+// ── API HELPERS ───────────────────────────────────────────────────────
+async function api(method, path, body) {
+  try {
+    const res = await fetch('/api' + path, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: body ? JSON.stringify(body) : undefined
+    });
+    const data = await res.json();
+    return { ok: res.ok, status: res.status, data };
+  } catch(e) {
+    return { ok: false, status: 0, data: { error: 'Sem conexão com o servidor.' } };
+  }
+}
+
+// ── AUTH ──────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('tab-login').classList.toggle('active', tab==='login');
+  document.getElementById('tab-cadastro').classList.toggle('active', tab==='cadastro');
+  document.getElementById('form-login').style.display = tab==='login' ? '' : 'none';
+  document.getElementById('form-cadastro').style.display = tab==='cadastro' ? '' : 'none';
+  clearAuthErrors();
+}
+
+function clearAuthErrors() {
+  ['login-error','cadastro-error','cadastro-success'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) { el.textContent=''; el.className=el.className.replace(' show',''); }
+  });
+}
+
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if(!btn) return;
+  btn.disabled = loading;
+  btn.innerHTML = loading
+    ? '<span class="spinner"></span> Aguarde...'
+    : (btnId==='btn-login' ? 'Entrar no Sistema' : 'Criar Conta');
+}
+
+async function doLogin() {
+  clearAuthErrors();
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  if(!email || !senha) {
+    showAuthError('login-error', 'Preencha e-mail e senha.');
+    return;
+  }
+  setLoading('btn-login', true);
+  const { ok, data } = await api('POST', '/auth/login', { email, senha });
+  setLoading('btn-login', false);
+  if(ok) {
+    currentUser = data.user;
+    enterApp();
+  } else {
+    showAuthError('login-error', data.error || 'Erro ao fazer login.');
+  }
+}
+
+async function doCadastro() {
+  clearAuthErrors();
+  const nome = document.getElementById('cad-nome').value.trim();
+  const email = document.getElementById('cad-email').value.trim();
+  const senha = document.getElementById('cad-senha').value;
+  const confirmarSenha = document.getElementById('cad-confirmar').value;
+  if(!nome||!email||!senha||!confirmarSenha) {
+    showAuthError('cadastro-error','Preencha todos os campos.');
+    return;
+  }
+  setLoading('btn-cadastro', true);
+  const { ok, data } = await api('POST', '/auth/cadastro', { nome, email, senha, confirmarSenha });
+  setLoading('btn-cadastro', false);
+  if(ok) {
+    currentUser = data.user;
+    enterApp();
+  } else {
+    showAuthError('cadastro-error', data.error || 'Erro ao criar conta.');
+  }
+}
+
+async function doLogout() {
+  await api('POST', '/auth/logout');
+  currentUser = null;
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+  switchTab('login');
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-senha').value = '';
+}
+
+function showAuthError(id, msg) {
+  const el = document.getElementById(id);
+  if(el) { el.textContent = msg; el.classList.add('show'); }
+}
+
+function enterApp() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'block';
+  // Update sidebar
+  document.getElementById('sidebar-name').textContent = currentUser.nome;
+  document.getElementById('sidebar-role').textContent = currentUser.perfil + '@printos';
+  document.getElementById('sidebar-avatar').textContent = currentUser.nome.slice(0,2).toUpperCase();
+  document.getElementById('setting-session').textContent = currentUser.email;
+  // Show admin-only items
+  document.querySelectorAll('.admin-only').forEach(el => {
+    el.style.display = currentUser.perfil === 'admin' ? '' : 'none';
+  });
+  renderAll();
+  if(currentUser.perfil === 'admin') loadUsers();
+  toast(`Bem-vindo, ${currentUser.nome}!`, 'green');
+}
+
+// Check existing session on load
+async function checkSession() {
+  const { ok, data } = await api('GET', '/auth/me');
+  if(ok && data.user) {
+    currentUser = data.user;
+    enterApp();
+  }
+}
+
+// ── DATA ──────────────────────────────────────────────────────────────
+const printers = [
+  {id:1,name:'HP LaserJet Pro',model:'M404dn',location:'Sala 3B',type:'Laser',status:'online',toner:78,paper:true,jobs:2},
+  {id:2,name:'Epson WorkForce',model:'WF-7820',location:'RH',type:'Jato de Tinta',status:'online',toner:55,paper:true,jobs:1},
+  {id:3,name:'Canon PIXMA',model:'G7010',location:'Diretoria',type:'Jato de Tinta',status:'offline',toner:0,paper:true,jobs:0},
+  {id:4,name:'Kyocera ECOSYS',model:'M2040dn',location:'Recepção',type:'Laser',status:'warning',toner:12,paper:true,jobs:1},
+  {id:5,name:'Brother MFC',model:'L2750DW',location:'Financeiro',type:'Laser',status:'online',toner:91,paper:false,jobs:1},
+  {id:6,name:'Xerox VersaLink',model:'B405',location:'TI',type:'Laser',status:'idle',toner:64,paper:true,jobs:0},
+];
+const jobs = [
+  {id:'JOB-001',doc:'Relatório_Q1_2026.pdf',printer:'HP LaserJet Pro',pages:14,copies:2,status:'printing',progress:62,user:'ana.silva'},
+  {id:'JOB-002',doc:'Contrato_Fornecedor.pdf',printer:'Epson WorkForce',pages:8,copies:1,status:'queued',progress:0,user:'carlos.m'},
+  {id:'JOB-003',doc:'Notas_Reuniao.docx',printer:'Kyocera ECOSYS',pages:3,copies:5,status:'queued',progress:0,user:'ti.admin'},
+  {id:'JOB-004',doc:'Manual_Onboarding.pdf',printer:'Brother MFC',pages:22,copies:1,status:'printing',progress:34,user:'rh.team'},
+  {id:'JOB-005',doc:'Planilha_Custos.xlsx',printer:'HP LaserJet Pro',pages:6,copies:1,status:'queued',progress:0,user:'fin.dep'},
+];
+
+// ── RENDER ────────────────────────────────────────────────────────────
+function printerCard(p) {
+  const statusLabel = {online:'Online',warning:'Atenção',offline:'Offline',idle:'Inativo'};
+  const tonerColor = p.toner<20?'red':p.toner<40?'yellow':'green';
+  const iconColor = p.status==='online'?'var(--accent)':p.status==='warning'?'var(--warn)':p.status==='offline'?'var(--danger)':'var(--ink3)';
+  return `<div class="printer-card">
+    <div class="printer-header">
+      <div class="printer-icon-wrap"><svg viewBox="0 0 24 24" fill="${iconColor}" width="24" height="24"><path d="M6 2h12v4H6zM4 6h16a2 2 0 012 2v8a2 2 0 01-2 2h-2v4H6v-4H4a2 2 0 01-2-2V8a2 2 0 012-2zm14 3a1 1 0 100 2 1 1 0 000-2zM8 16h8v4H8v-4z"/></svg></div>
+      <div class="printer-meta"><div class="printer-name">${p.name}</div><div class="printer-model">${p.model} · ${p.location}</div></div>
+      <div class="status-dot ${p.status}"></div>
+    </div>
+    <div class="printer-stats">
+      <div class="p-stat"><div class="p-stat-label">Toner</div><div class="p-stat-val" style="color:var(--${tonerColor})">${p.status==='offline'?'—':p.toner+'%'}</div></div>
+      <div class="p-stat"><div class="p-stat-label">Jobs</div><div class="p-stat-val">${p.jobs}</div></div>
+      <div class="p-stat"><div class="p-stat-label">Papel</div><div class="p-stat-val" style="color:${p.paper?'var(--accent)':'var(--danger)'}">${p.paper?'OK':'Vazio'}</div></div>
+      <div class="p-stat"><div class="p-stat-label">Tipo</div><div class="p-stat-val" style="color:var(--ink2);font-size:11px">${p.type}</div></div>
+    </div>
+    ${p.status!=='offline'?`<div class="progress-bar"><div class="progress-fill ${tonerColor}" style="width:${p.toner}%"></div></div>`:''}
+    <div class="printer-footer">
+      <span class="status-tag ${p.status}">${statusLabel[p.status]}</span>
+      <div class="action-btns">
+        <div class="icon-btn" onclick="toast('Detalhes: ${p.name}','green')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg></div>
+        ${p.status!=='offline'?`<div class="icon-btn" onclick="printJobModal()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 2h12v4H6zM4 6h16a2 2 0 012 2v8a2 2 0 01-2 2h-2v4H6v-4H4a2 2 0 01-2-2V8a2 2 0 012-2zM8 16h8v4H8v-4z"/></svg></div>`:''}
+        <div class="icon-btn" onclick="removePrinter(${p.id})"><svg viewBox="0 0 24 24" fill="currentColor" style="color:var(--danger)"><path d="M6 19c0 1.1.9 2 2 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function queueTable(list) {
+  const si = {printing:{label:'Imprimindo',cls:'online'},queued:{label:'Na fila',cls:'idle'},done:{label:'Concluído',cls:'idle'},error:{label:'Erro',cls:'offline'}};
+  const rows = list.map(j=>`<tr>
+    <td class="mono">${j.id}</td><td><strong>${j.doc}</strong></td><td>${j.printer}</td>
+    <td class="mono">${j.pages}p × ${j.copies}</td><td class="mono">${j.user}</td>
+    <td><div class="job-progress"><div class="job-bar"><div class="job-fill ${j.status}" style="width:${j.progress}%"></div></div><span class="job-pct">${j.progress}%</span></div></td>
+    <td><span class="status-tag ${(si[j.status]||si.queued).cls}">${(si[j.status]||si.queued).label}</span></td>
+    <td><div class="action-btns"><div class="icon-btn" onclick="cancelJob('${j.id}')"><svg viewBox="0 0 24 24" fill="currentColor" style="color:var(--danger)"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></div></div></td>
+  </tr>`).join('');
+  return `<table><thead><tr><th>ID</th><th>Documento</th><th>Impressora</th><th>Páginas</th><th>Usuário</th><th>Progresso</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function renderAll() {
+  document.getElementById('dash-printers').innerHTML = printers.slice(0,3).map(p=>printerCard(p)).join('');
+  document.getElementById('dash-queue-wrap').innerHTML = queueTable(jobs.slice(0,3));
+  document.getElementById('all-printers').innerHTML = printers.map(p=>printerCard(p)).join('');
+  document.getElementById('printer-count').textContent = `(${printers.length})`;
+  document.getElementById('full-queue-wrap').innerHTML = queueTable(jobs);
+  populatePrinterSelect();
+}
+
+// ── NAV ───────────────────────────────────────────────────────────────
+const titles = {dashboard:'<span>Dashboard</span> — Visão Geral',printers:'<span>Impressoras</span> — Gerenciamento',queue:'<span>Fila</span> — Jobs em andamento',alerts:'<span>Alertas</span> — Notificações',sim:'<span>Simulação</span> — Visualizador',users:'<span>Usuários</span> — Gerenciamento',settings:'<span>Configurações</span> — Sistema'};
+function navigate(el) {
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+  const v = el.dataset.view;
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.getElementById('topbar-title').innerHTML = titles[v]||'';
+  if(v==='users') loadUsers();
+}
+
+// ── PRINTER MODAL ─────────────────────────────────────────────────────
+function openModal(){document.getElementById('modal-overlay').classList.add('open')}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open')}
+function closeModalIfOutside(e){if(e.target.id==='modal-overlay')closeModal()}
+function addPrinter() {
+  const name = document.getElementById('inp-name').value.trim();
+  if(!name){toast('Preencha o nome','yellow');return}
+  printers.push({id:Date.now(),name,model:document.getElementById('inp-model').value.trim()||'—',location:document.getElementById('inp-location').value.trim()||'N/A',type:document.getElementById('inp-type').value,status:'idle',toner:100,paper:true,jobs:0});
+  closeModal();
+  ['inp-name','inp-model','inp-location'].forEach(id=>document.getElementById(id).value='');
+  renderAll(); toast(`${name} adicionada!`,'green');
+}
+
+// ── JOB MODAL ────────────────────────────────────────────────────────
+function populatePrinterSelect(){const s=document.getElementById('job-printer');if(!s)return;s.innerHTML=printers.filter(p=>p.status!=='offline').map(p=>`<option>${p.name} — ${p.location}</option>`).join('')}
+function printJobModal(){populatePrinterSelect();document.getElementById('job-modal-overlay').classList.add('open')}
+function closeJobModal(){document.getElementById('job-modal-overlay').classList.remove('open')}
+function closeJobModalIfOutside(e){if(e.target.id==='job-modal-overlay')closeJobModal()}
+function submitJob() {
+  const doc = document.getElementById('job-doc').value.trim();
+  if(!doc){toast('Informe o documento','yellow');return}
+  const printer = document.getElementById('job-printer').value.split(' — ')[0];
+  jobs.push({id:'JOB-'+(jobs.length+1).toString().padStart(3,'0'),doc,printer,pages:parseInt(document.getElementById('job-pages').value)||1,copies:parseInt(document.getElementById('job-copies').value)||1,status:'queued',progress:0,user:currentUser?.nome||'admin'});
+  const active=jobs.filter(j=>j.status!=='done'&&j.status!=='error').length;
+  document.getElementById('queue-badge').textContent=active;
+  document.getElementById('dash-jobs').textContent=active;
+  closeJobModal();document.getElementById('job-doc').value='';
+  renderAll();toast(`"${doc}" adicionado à fila!`,'green');
+}
+
+// ── USER MODAL ────────────────────────────────────────────────────────
+function openUserModal(user=null){
+  document.getElementById('user-modal-title').textContent = user ? 'Editar Usuário' : 'Novo Usuário';
+  document.getElementById('edit-user-id').value = user ? user.id : '';
+  document.getElementById('um-nome').value = user?.nome||'';
+  document.getElementById('um-email').value = user?.email||'';
+  document.getElementById('um-senha').value = '';
+  document.getElementById('um-perfil').value = user?.perfil||'operador';
+  const err = document.getElementById('user-modal-error');
+  err.textContent=''; err.classList.remove('show');
+  document.getElementById('user-modal-overlay').classList.add('open');
+}
+function closeUserModal(){document.getElementById('user-modal-overlay').classList.remove('open')}
+function closeUserModalIfOutside(e){if(e.target.id==='user-modal-overlay')closeUserModal()}
+
+async function saveUser() {
+  const id = document.getElementById('edit-user-id').value;
+  const body = {
+    nome: document.getElementById('um-nome').value.trim(),
+    email: document.getElementById('um-email').value.trim(),
+    perfil: document.getElementById('um-perfil').value
+  };
+  const senha = document.getElementById('um-senha').value;
+  if(senha) body.senha = senha;
+  if(!body.nome||!body.email){
+    const err=document.getElementById('user-modal-error');
+    err.textContent='Preencha nome e e-mail.';err.classList.add('show');return;
+  }
+  const btn = document.getElementById('btn-save-user');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+  const { ok, data } = id
+    ? await api('PUT', `/users/${id}`, body)
+    : await api('POST', '/users', { ...body, senha: senha||'temp1234' });
+  btn.disabled=false; btn.textContent='Salvar';
+  if(ok){
+    closeUserModal();
+    toast(id?'Usuário atualizado!':'Usuário criado!','green');
+    loadUsers();
+  } else {
+    const err=document.getElementById('user-modal-error');
+    err.textContent=data.error||'Erro ao salvar.';err.classList.add('show');
+  }
+}
+
+async function deleteUser(id, nome) {
+  if(!confirm(`Remover "${nome}"?`)) return;
+  const {ok,data} = await api('DELETE', `/users/${id}`);
+  if(ok){toast(`${nome} removido.`,'yellow');loadUsers();}
+  else toast(data.error||'Erro ao remover.','red');
+}
+
+const avatarColors = ['linear-gradient(135deg,#a080f0,#4af0a0)','linear-gradient(135deg,#40a8f0,#a080f0)','linear-gradient(135deg,#f0c040,#f05060)','linear-gradient(135deg,#4af0a0,#40a8f0)'];
+
+async function loadUsers() {
+  const { ok, data } = await api('GET', '/users');
+  if(!ok) return;
+  const grid = document.getElementById('users-grid');
+  document.getElementById('users-count').textContent = `(${data.users.length})`;
+  const perfilTag = {admin:'<span class="perfil-tag admin">Admin</span>',operador:'<span class="perfil-tag operador">Operador</span>',visualizador:'<span class="perfil-tag visualizador">Visualizador</span>'};
+  grid.innerHTML = data.users.map((u,i) => `
+    <div class="user-card">
+      <div class="user-card-header">
+        <div class="user-card-avatar" style="background:${avatarColors[i%4]}">${u.nome.slice(0,2).toUpperCase()}</div>
+        <div class="user-card-info">
+          <div class="user-card-name">${u.nome}</div>
+          <div class="user-card-email">${u.email}</div>
+        </div>
+        ${perfilTag[u.perfil]||''}
+      </div>
+      <div class="user-card-meta">
+        <span class="user-card-date">Criado: ${new Date(u.criado_em).toLocaleDateString('pt-BR')}</span>
+        <div class="action-btns">
+          <div class="icon-btn" title="Editar" onclick='openUserModal(${JSON.stringify(u)})'>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          </div>
+          ${u.id !== currentUser?.id ? `<div class="icon-btn" title="Remover" onclick="deleteUser(${u.id},'${u.nome}')">
+            <svg viewBox="0 0 24 24" fill="currentColor" style="color:var(--danger)"><path d="M6 19c0 1.1.9 2 2 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+          </div>` : ''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ── ACTIONS ───────────────────────────────────────────────────────────
+function removePrinter(id){const i=printers.findIndex(p=>p.id===id);if(i<0)return;const n=printers[i].name;printers.splice(i,1);renderAll();toast(`${n} removida`,'yellow')}
+function cancelJob(id){const j=jobs.find(x=>x.id===id);if(j){j.status='error';j.progress=0}renderAll();toast(`Job ${id} cancelado`,'red')}
+function clearDoneJobs(){const b=jobs.length;jobs.splice(0,jobs.length,...jobs.filter(j=>j.status!=='done'&&j.status!=='error'));toast(`${b-jobs.length} job(s) removido(s)`,'green');renderAll()}
+
+// ── SIMULATION ────────────────────────────────────────────────────────
+let simInterval=null,simPct=0;
+const simDocs=['Proposta_Comercial.pdf','Ata_Reuniao.docx','Fatura_0456.pdf','Manual_Usuario.pdf'];
+function startSimPrint(){
+  if(simInterval)return;simPct=0;
+  const doc=simDocs[Math.floor(Math.random()*simDocs.length)];
+  document.getElementById('anim-job-name').textContent=doc;
+  document.getElementById('anim-job-sub').textContent='Enviando para HP LaserJet Pro…';
+  document.getElementById('printer3d').classList.add('printing-active');
+  document.getElementById('p3d-light').classList.add('blink');
+  document.getElementById('btn-start-print').style.display='none';
+  document.getElementById('btn-stop-print').style.display='';
+  simInterval=setInterval(()=>{
+    simPct=Math.min(simPct+(Math.random()*3+1),100);
+    document.getElementById('sim-bar').style.width=simPct+'%';
+    document.getElementById('sim-pct').textContent=Math.round(simPct)+'%';
+    document.getElementById('anim-job-sub').textContent=`Imprimindo… ${Math.round(simPct)}% concluído`;
+    if(simPct>=100){stopSimPrint();document.getElementById('anim-job-sub').textContent='✓ Impressão concluída!';toast('Impressão concluída!','green')}
+  },120);
+}
+function stopSimPrint(){
+  clearInterval(simInterval);simInterval=null;
+  document.getElementById('printer3d').classList.remove('printing-active');
+  document.getElementById('p3d-light').classList.remove('blink');
+  document.getElementById('btn-start-print').style.display='';
+  document.getElementById('btn-stop-print').style.display='none';
+  if(simPct<100){document.getElementById('anim-job-name').textContent='— Nenhum job ativo —';document.getElementById('anim-job-sub').textContent='Impressão interrompida';document.getElementById('sim-bar').style.width='0%';document.getElementById('sim-pct').textContent='0%'}
+}
+
+// ── JOB PROGRESS ─────────────────────────────────────────────────────
+setInterval(()=>{
+  jobs.forEach(j=>{if(j.status==='printing'&&j.progress<100){j.progress=Math.min(j.progress+Math.random()*4+1,100);if(j.progress>=100){j.status='done';j.progress=100}}});
+  const active=jobs.filter(j=>j.status!=='done'&&j.status!=='error').length;
+  document.getElementById('queue-badge').textContent=active;
+  document.getElementById('dash-jobs').textContent=active;
+  document.getElementById('full-queue-wrap').innerHTML=queueTable(jobs);
+  document.getElementById('dash-queue-wrap').innerHTML=queueTable(jobs.slice(0,3));
+},1500);
+
+// ── TOAST ─────────────────────────────────────────────────────────────
+function toast(msg,type='green'){const w=document.getElementById('toast-wrap');const e=document.createElement('div');e.className='toast';e.innerHTML=`<div class="toast-dot ${type}"></div>${msg}`;w.appendChild(e);setTimeout(()=>{e.style.opacity='0';e.style.transition='opacity .3s';setTimeout(()=>e.remove(),300)},3000)}
+
+// ── INIT ──────────────────────────────────────────────────────────────
+checkSession();
+</script>
+</body>
+</html>
